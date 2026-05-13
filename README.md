@@ -22,19 +22,34 @@ The goal is to make writing high-quality commit messages faster, easier, and mor
 
 # Demo
 
-```txt
-git add .
+Stage your changes:
 
+```bash
+git add .
+```
+
+Run the CLI:
+
+```bash
 npm run dev
 ```
 
-Example output:
+Select one of the generated commit messages.
+(Example output):
 
 ```txt
 Choose a commit message:
 ❯ feat: add AI-powered commit message generator
   fix: improve staged diff parsing
   chore: configure TypeScript CLI setup
+```
+
+or
+
+Generate a message and immediately create the commit:
+
+```bash
+npm run dev -- --commit
 ```
 
 ---
@@ -71,7 +86,7 @@ optional automatic git commit
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/commit-ai.git
+git clone https://github.com/emvillama/commit-ai.git
 cd commit-ai
 ```
 
@@ -96,45 +111,6 @@ Or copy the example file:
 
 ```bash
 cp .env.example .env
-```
-
----
-# Usage
-
-Stage your changes:
-
-```bash
-git add .
-```
-
-Run the CLI:
-
-```bash
-npm run dev
-```
-
-Select one of the generated commit messages.
-
----
-
-# Commit Automatically
-
-Generate a message and immediately create the commit:
-
-```bash
-npm run dev -- --commit
-```
-
----
-
-# Example Commit Messages
-
-```txt
-feat: add interactive commit selection
-fix: handle empty staged diffs
-docs: add installation instructions
-refactor: simplify AI response parsing
-chore: configure TypeScript build setup
 ```
 
 ---
@@ -251,36 +227,6 @@ before adding advanced features.
 - [ ] Full documentation
 - [ ] Plugin architecture exploration
 - [ ] Multi-provider AI support
-
----
-
-# Development
-
-Run locally:
-
-```bash
-npm run dev
-```
-
-Build the project:
-
-```bash
-npm run build
-```
-
-Run tests:
-
-```bash
-npm test
-```
-
----
-
-# Contributing
-
-Contributions, ideas, and feedback are welcome.
-
-Future contribution guidelines will be added as the project matures.
 
 ---
 
