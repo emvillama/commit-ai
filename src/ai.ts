@@ -1,6 +1,10 @@
 import Groq from "groq-sdk";
 import { buildCommitPrompt } from "./prompt.js";
 
+if (!process.env.GROQ_API_KEY) {
+  throw new Error("Missing GROQ_API_KEY. Add it to your .env file.");
+}
+
 const client = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
