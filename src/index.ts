@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import "dotenv/config";
 import { Command } from "commander";
 import { select, confirm } from "@inquirer/prompts";
@@ -9,7 +11,7 @@ const program = new Command();
 program
   .name("commit-ai")
   .description("Generate commit messages from staged git changes using AI.")
-  .version("1.0.0")
+  .version("0.1.0")
   .option("-c, --commit", "commit using the selected message")
   .action(async (options) => {
     try {
