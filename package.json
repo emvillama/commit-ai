@@ -1,10 +1,10 @@
 {
-  "name": "commitpilot",
+  "name": "commit-ai",
   "version": "0.1.0",
-  "description": "Generate AI-powered conventional commit messages from staged git changes.",
+  "description": "Generate commit messages from staged git changes using AI.",
   "type": "module",
   "bin": {
-    "commitpilot": "./dist/index.js"
+    "commit-ai": "./dist/index.js"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
