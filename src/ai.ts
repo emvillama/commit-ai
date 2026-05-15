@@ -4,7 +4,7 @@ import { buildCommitPrompt } from "./prompt.js";
 export async function generateCommitMessages(diff: string): Promise<string[]>{
   const apiKey = process.env.GROQ_API_KEY;
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!apiKey) {
     throw new Error("Missing GROQ_API_KEY. Add it to your .env file.");
   }
 
