@@ -16,27 +16,41 @@ program
   .action(async (options) => {
     try {
       const diff = await getStagedDiff();
-      const messages = await generateCommitMessages(diff);
+      let messages = await generateCommitMessages(diff);
 
-      const selected = await select({
-        message: "Choose a commit message:",
-        choices: messages.map((message) => ({
-          name: message,
-          value: message
-        }))
-      });
+      while (true) {
+        const REROLL = "___reroll___";
 
-      const shouldCommit =
-        options.commit ||
-        (await confirm({
-          message: "Commit with this message?",
-          default: false
-        }));
+        const selected = await select({
+          message: "Choose a commit message:",
+          choices: [
+            ...messages.map((message) => ({
+              name: message,
+              value: message,
+            })),
+            { name: "Re-roll suggestions", value: REROLL },
+          ],
+        });
 
-      if (shouldCommit) {
-        await commit(selected);
-      } else {
-        console.log(`\n${selected}`);
+        if (selected === REROLL) {
+          messages = await generateCommitMessages(diff);
+          continue;
+        }
+
+        const shouldCommit =
+          options.commit ||
+          (await confirm({
+            message: "Commit with this message?",
+            default: false,
+          }));
+
+        if (shouldCommit) {
+          await commit(selected);
+        } else {
+          console.log(`\n${selected}`);
+        }
+
+        break;
       }
     } catch (error) {
       console.error(error instanceof Error ? error.message : error);
