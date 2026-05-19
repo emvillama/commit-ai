@@ -1,8 +1,8 @@
-export function buildCommitPrompt(diff: string): string {
+export function buildCommitPrompt(diff: string, count : number = 3): string {
   return `
 You are an expert software engineer writing git commit messages.
 
-Analyze the git diff below and generate exactly 3 conventional commit messages.
+Analyze the git diff below and generate exactly ${count} conventional commit messages.
 
 Rules:
 - Use conventional commit format: <type>(<optional scope>): <description>

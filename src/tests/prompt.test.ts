@@ -4,7 +4,7 @@ import { buildCommitPrompt } from "../prompt.js";
 describe("buildCommitPrompt", () => {
   it("includes the diff in the prompt", () => {
     const diff = "diff --git a/foo.ts b/foo.ts";
-    const prompt = buildCommitPrompt(diff);
+    const prompt = buildCommitPrompt(diff, 3);
     expect(prompt).toContain(diff);
   });
 
