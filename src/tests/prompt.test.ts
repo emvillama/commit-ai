@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCommitPrompt } from "../prompt.js";
+import { buildCommitPrompt } from "../lib/prompt.js";
 
 describe("buildCommitPrompt", () => {
   it("includes the diff in the prompt", () => {
