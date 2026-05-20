@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMessages } from "../providers/parse.js";
+import { parseMessages } from "../lib/parse.js";
 
 describe("parseMessages", () => {
   it("parses a valid JSON array of strings", () => {
