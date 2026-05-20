@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import type { Provider } from "./types";
-import { GroqProvider } from "./groq";
-import { OpenAIProvider } from "./openai";
+import type { Provider } from "./types.js";
+import { GroqProvider } from "./groq.js";
+import { OpenAIProvider } from "./openai.js";
 
 interface ExtensionConfig {
   provider: string;
