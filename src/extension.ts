@@ -1,31 +1,125 @@
 import * as vscode from "vscode";
+import { exec } from "child_process";
+import { promisify } from "util";
 import { getProvider, getExtensionConfig } from "./lib/extensionConfig";
 import { buildCommitPrompt } from "./lib/prompt";
 
-async function getStagedDiff(): Promise<string> {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    throw new Error("No workspace folder open.");
+const execAsync = promisify(exec);
+
+async function getStagedDiff(workspacePath: string): Promise<string> {
+  try {
+    const { stdout } = await execAsync("git diff --staged", {
+      cwd: workspacePath,
+    });
+
+    if (!stdout.trim()) {
+      throw new Error(
+        "No staged changes found. Stage your changes first with git add."
+      );
+    }
+
+    return stdout;
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message.includes("not a git repository")) {
+        throw new Error("This folder is not a git repository.");
+      }
+      throw err;
+    }
+    throw err;
   }
+}
 
-  const workspacePath = workspaceFolders[0]!.uri.fsPath;
-
-  // Use VS Code's built-in terminal API to run git diff --staged
-  const { exec } = await import("child_process");
-  const { promisify } = await import("util");
-  const execAsync = promisify(exec);
-
-  const { stdout } = await execAsync("git diff --staged", {
+async function runCommit(
+  workspacePath: string,
+  message: string
+): Promise<void> {
+  await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
     cwd: workspacePath,
   });
+}
 
-  if (!stdout.trim()) {
-    throw new Error(
-      "No staged changes found. Stage your changes first with git add."
-    );
+async function generateAndShow(
+  workspacePath: string
+): Promise<void> {
+  const { count } = getExtensionConfig();
+
+  const messages = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Commit AI: Generating messages...",
+      cancellable: false,
+    },
+    async () => {
+      const diff = await getStagedDiff(workspacePath);
+      const provider = getProvider();
+      return provider.generateMessages(buildCommitPrompt(diff, count));
+    }
+  );
+
+  const REROLL = "$(refresh)  Re-roll suggestions";
+
+  const selected = await vscode.window.showQuickPick(
+    [...messages, REROLL],
+    {
+      placeHolder: "Select a commit message",
+      title: "Commit AI — Generated Messages",
+    }
+  );
+
+  if (!selected) {
+    return;
   }
 
-  return stdout;
+  if (selected === REROLL) {
+    await generateAndShow(workspacePath);
+    return;
+  }
+
+  const action = await vscode.window.showQuickPick(
+    ["Set as commit message", "Commit directly", "Copy to clipboard"],
+    {
+      placeHolder: "What do you want to do with this message?",
+      title: `"${selected}"`,
+    }
+  );
+
+  if (!action) {
+    return;
+  }
+
+  if (action === "Set as commit message") {
+    const scm = vscode.scm.inputBox;
+    // Find the git extension's SCM input box
+    const gitExtension = vscode.extensions.getExtension("vscode.git");
+    if (gitExtension) {
+      const git = gitExtension.exports.getAPI(1);
+      const repo = git.repositories[0];
+      if (repo) {
+        repo.inputBox.value = selected;
+        await vscode.commands.executeCommand("workbench.view.scm");
+        vscode.window.showInformationMessage("Commit message set in Source Control.");
+      }
+    }
+  } else if (action === "Commit directly") {
+    await runCommit(workspacePath, selected);
+    vscode.window.showInformationMessage(`Committed: "${selected}"`);
+  } else {
+    await vscode.env.clipboard.writeText(selected);
+    vscode.window.showInformationMessage(`Copied to clipboard: "${selected}"`);
+  }
+
+  if (!action) {
+    return;
+  }
+
+  if (action === "Commit directly") {
+    await runCommit(workspacePath, selected);
+    vscode.window.showInformationMessage(`Committed: "${selected}"`);
+  } else {
+    await vscode.env.clipboard.writeText(selected);
+    vscode.window.showInformationMessage(`Copied to clipboard: "${selected}"`);
+  }
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -34,46 +128,23 @@ export function activate(context: vscode.ExtensionContext) {
   const disposable = vscode.commands.registerCommand(
     "commit-ai.generate",
     async () => {
-      await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "Commit AI",
-          cancellable: false,
-        },
-        async (progress) => {
-          try {
-            progress.report({ message: "Reading staged changes..." });
-            const diff = await getStagedDiff();
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage(
+          "Commit AI: No workspace folder open."
+        );
+        return;
+      }
 
-            progress.report({ message: "Generating commit messages..." });
-            const { count } = getExtensionConfig();
-            const provider = getProvider();
-            const messages = await provider.generateMessages(
-              buildCommitPrompt(diff, count)
-            );
+      const workspacePath = workspaceFolders[0]!.uri.fsPath;
 
-            // Phase 1: show results as quick pick items
-            const selected = await vscode.window.showQuickPick(messages, {
-              placeHolder: "Select a commit message",
-              title: "Commit AI — Generated Messages",
-            });
-
-            if (!selected) {
-              return;
-            }
-
-            // Copy to clipboard
-            await vscode.env.clipboard.writeText(selected);
-            vscode.window.showInformationMessage(
-              `Copied to clipboard: "${selected}"`
-            );
-          } catch (err) {
-            vscode.window.showErrorMessage(
-              `Commit AI: ${err instanceof Error ? err.message : String(err)}`
-            );
-          }
-        }
-      );
+      try {
+        await generateAndShow(workspacePath);
+      } catch (err) {
+        vscode.window.showErrorMessage(
+          `Commit AI: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
     }
   );
 
