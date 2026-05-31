@@ -379,13 +379,13 @@
 
       if (state.messages.length > 0) {
         messagesSection.classList.add('visible');
-        messagesList.innerHTML = state.messages.map((msg) => `
+        messagesList.innerHTML = state.messages.map((msg, i) => `
           <div class="message-card">
             <div class="message-text">${escapeHtml(msg)}</div>
             <div class="message-actions">
-              <button class="btn-primary" onclick="setScmMessage(${JSON.stringify(msg)})">Set Message</button>
-              <button class="btn-secondary" onclick="commitMessage(${JSON.stringify(msg)})">Commit</button>
-              <button class="btn-icon" onclick="copyMessage(${JSON.stringify(msg)})">⎘ Copy</button>
+              <button class="btn-primary" data-action="setScm" data-index="${i}">Set Message</button>
+              <button class="btn-secondary" data-action="commit" data-index="${i}">Commit</button>
+              <button class="btn-icon" data-action="copy" data-index="${i}">⎘ Copy</button>
             </div>
           </div>
         `).join('');
@@ -399,16 +399,16 @@
 
       if (state.history.length > 0) {
         historySection.classList.add('visible');
-        historyList.innerHTML = state.history.map((entry) => `
+        historyList.innerHTML = state.history.map((entry, ei) => `
           <div class="history-item">
             <div class="history-meta">
               <span class="history-timestamp">${formatDate(entry.timestamp)}</span>
             </div>
             <div class="history-messages">
-              ${entry.messages.map((msg) => `
+              ${entry.messages.map((msg, mi) => `
                 <div class="history-message">
                   <span title="${escapeHtml(msg)}">${escapeHtml(msg)}</span>
-                  <button class="btn-icon" onclick="copyMessage(${JSON.stringify(msg)})">⎘</button>
+                  <button class="btn-icon" data-action="historyCopy" data-entry="${ei}" data-index="${mi}">⎘</button>
                 </div>
               `).join('')}
             </div>
@@ -434,6 +434,26 @@
         hour: '2-digit', minute: '2-digit'
       });
     }
+
+    // ── Delegated click handler for dynamically rendered buttons ──
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const index = parseInt(btn.dataset.index, 10);
+
+      if (action === 'setScm') {
+        setScmMessage(state.messages[index]);
+      } else if (action === 'commit') {
+        commitMessage(state.messages[index]);
+      } else if (action === 'copy') {
+        copyMessage(state.messages[index]);
+      } else if (action === 'historyCopy') {
+        const entryIndex = parseInt(btn.dataset.entry, 10);
+        copyMessage(state.history[entryIndex].messages[index]);
+      }
+    });
 
     // Initial render
     render();
