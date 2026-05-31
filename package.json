@@ -1,22 +1,70 @@
 {
   "name": "commit-ai",
+  "displayName": "Commit AI",
+  "description": "Generate conventional commit messages from staged git changes using AI.",
   "version": "0.1.0",
-  "description": "Generate commit messages from staged git changes using AI.",
-  "type": "module",
-  "bin": {
-    "commit-ai": "./dist/index.js"
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "commit-ai.generate",
+        "title": "Commit AI: Generate Commit Messages"
+      }
+    ],
+    "configuration": {
+      "title": "Commit AI",
+      "properties": {
+        "commitAi.provider": {
+          "type": "string",
+          "default": "groq",
+          "enum": [
+            "groq",
+            "openai"
+          ],
+          "description": "AI provider to use for generating commit messages."
+        },
+        "commitAi.groqApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Groq API key. Get one free at https://console.groq.com"
+        },
+        "commitAi.openAiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your OpenAI API key. Get one at https://platform.openai.com"
+        },
+        "commitAi.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model to use. Leave blank to use the provider default."
+        },
+        "commitAi.count": {
+          "type": "number",
+          "default": 3,
+          "description": "Number of commit message suggestions to generate."
+        }
+      }
+    }
   },
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "build": "tsc",
-    "test": "vitest",
-    "start": "node dist/index.js"
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "dev:cli": "tsx src/cli/index.ts",
+    "test": "vitest"
   },
   "devDependencies": {
-    "@types/node": "^25.7.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.120.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "vitest": "^3.0.0"
+    "typescript": "^5.4.0"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.4.3",

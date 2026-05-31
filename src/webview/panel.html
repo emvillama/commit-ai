@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';" />
+  <title>Commit AI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      color: var(--vscode-foreground);
+      background: var(--vscode-editor-background);
+      padding: 16px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--vscode-panel-border);
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--vscode-foreground);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header h1 span.icon {
+      font-size: 18px;
+    }
+
+    /* ── Buttons ── */
+    button {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      cursor: pointer;
+      border: none;
+      border-radius: 2px;
+      padding: 5px 12px;
+      transition: opacity 0.1s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+    }
+
+    .btn-secondary {
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+    }
+
+    .btn-icon {
+      background: transparent;
+      color: var(--vscode-foreground);
+      padding: 4px 8px;
+      font-size: 13px;
+      opacity: 0.7;
+    }
+
+    .btn-icon:hover {
+      opacity: 1;
+      background: var(--vscode-toolbar-hoverBackground);
+    }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 0;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .loading.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--vscode-panel-border);
+      border-top-color: var(--vscode-button-background);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 40px 0;
+      color: var(--vscode-descriptionForeground);
+      text-align: center;
+    }
+
+    .empty-state .empty-icon {
+      font-size: 32px;
+      opacity: 0.5;
+    }
+
+    /* ── Messages ── */
+    .messages-section {
+      display: none;
+    }
+
+    .messages-section.visible {
+      display: block;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .message-card {
+      background: var(--vscode-editor-inactiveSelectionBackground);
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 8px;
+      transition: border-color 0.1s;
+    }
+
+    .message-card:hover {
+      border-color: var(--vscode-focusBorder);
+    }
+
+    .message-text {
+      font-family: var(--vscode-editor-font-family);
+      font-size: 13px;
+      color: var(--vscode-foreground);
+      margin-bottom: 10px;
+      word-break: break-word;
+    }
+
+    .message-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ── History ── */
+    .history-section {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .history-section.visible {
+      display: block;
+    }
+
+    .history-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--vscode-panel-border);
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .history-timestamp {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+    }
+
+    .history-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .history-message {
+      font-family: var(--vscode-editor-font-family);
+      font-size: 12px;
+      color: var(--vscode-foreground);
+      opacity: 0.8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .history-message span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Error ── */
+    .error-banner {
+      display: none;
+      background: var(--vscode-inputValidation-errorBackground);
+      border: 1px solid var(--vscode-inputValidation-errorBorder);
+      color: var(--vscode-foreground);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .error-banner.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <h1><span class="icon">✦</span> Commit AI</h1>
+    <button class="btn-primary" id="generateBtn" onclick="generate()">Generate Messages</button>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span>Generating commit messages...</span>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">⌥</div>
+    <div>Stage your changes and click <strong>Generate Messages</strong></div>
+  </div>
+
+  <!-- Generated messages -->
+  <div class="messages-section" id="messagesSection">
+    <div class="section-header">
+      <span class="section-title">Suggestions</span>
+      <button class="btn-icon" onclick="generate()" title="Re-roll suggestions">↺ Re-roll</button>
+    </div>
+    <div id="messagesList"></div>
+  </div>
+
+  <!-- History -->
+  <div class="history-section" id="historySection">
+    <div class="section-header">
+      <span class="section-title">History</span>
+      <button class="btn-icon" onclick="clearHistory()" title="Clear history">✕ Clear</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    // ── State ──
+    let state = {
+      messages: [],
+      history: [],
+      loading: false,
+      error: null,
+    };
+
+    // ── Send messages to extension ──
+    function generate() {
+      setState({ loading: true, error: null, messages: [] });
+      vscode.postMessage({ command: 'generate' });
+    }
+
+    function commitMessage(message) {
+      vscode.postMessage({ command: 'commit', message });
+    }
+
+    function setScmMessage(message) {
+      vscode.postMessage({ command: 'setScm', message });
+    }
+
+    function copyMessage(message) {
+      vscode.postMessage({ command: 'copy', message });
+    }
+
+    function clearHistory() {
+      vscode.postMessage({ command: 'clearHistory' });
+      setState({ history: [] });
+    }
+
+    // ── Receive messages from extension ──
+    window.addEventListener('message', (event) => {
+      const msg = event.data;
+
+      switch (msg.command) {
+        case 'setMessages':
+          setState({ messages: msg.messages, loading: false });
+          break;
+        case 'setHistory':
+          setState({ history: msg.history });
+          break;
+        case 'setError':
+          setState({ error: msg.error, loading: false });
+          break;
+        case 'setLoading':
+          setState({ loading: msg.loading });
+          break;
+      }
+    });
+
+    // ── State management & rendering ──
+    function setState(patch) {
+      state = { ...state, ...patch };
+      render();
+    }
+
+    function render() {
+      // Error
+      const errorBanner = document.getElementById('errorBanner');
+      if (state.error) {
+        errorBanner.textContent = state.error;
+        errorBanner.classList.add('visible');
+      } else {
+        errorBanner.classList.remove('visible');
+      }
+
+      // Loading
+      document.getElementById('loading').classList.toggle('visible', state.loading);
+      document.getElementById('generateBtn').disabled = state.loading;
+
+      // Empty state
+      document.getElementById('emptyState').style.display =
+        !state.loading && state.messages.length === 0 && !state.error ? 'flex' : 'none';
+
+      // Messages
+      const messagesSection = document.getElementById('messagesSection');
+      const messagesList = document.getElementById('messagesList');
+
+      if (state.messages.length > 0) {
+        messagesSection.classList.add('visible');
+        messagesList.innerHTML = state.messages.map((msg, i) => `
+          <div class="message-card">
+            <div class="message-text">${escapeHtml(msg)}</div>
+            <div class="message-actions">
+              <button class="btn-primary" data-action="setScm" data-index="${i}">Set Message</button>
+              <button class="btn-secondary" data-action="commit" data-index="${i}">Commit</button>
+              <button class="btn-icon" data-action="copy" data-index="${i}">⎘ Copy</button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        messagesSection.classList.remove('visible');
+      }
+
+      // History
+      const historySection = document.getElementById('historySection');
+      const historyList = document.getElementById('historyList');
+
+      if (state.history.length > 0) {
+        historySection.classList.add('visible');
+        historyList.innerHTML = state.history.map((entry, ei) => `
+          <div class="history-item">
+            <div class="history-meta">
+              <span class="history-timestamp">${formatDate(entry.timestamp)}</span>
+            </div>
+            <div class="history-messages">
+              ${entry.messages.map((msg, mi) => `
+                <div class="history-message">
+                  <span title="${escapeHtml(msg)}">${escapeHtml(msg)}</span>
+                  <button class="btn-icon" data-action="historyCopy" data-entry="${ei}" data-index="${mi}">⎘</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      } else {
+        historySection.classList.remove('visible');
+      }
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    // ── Delegated click handler for dynamically rendered buttons ──
+    document.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const index = parseInt(btn.dataset.index, 10);
+
+      if (action === 'setScm') {
+        setScmMessage(state.messages[index]);
+      } else if (action === 'commit') {
+        commitMessage(state.messages[index]);
+      } else if (action === 'copy') {
+        copyMessage(state.messages[index]);
+      } else if (action === 'historyCopy') {
+        const entryIndex = parseInt(btn.dataset.entry, 10);
+        copyMessage(state.history[entryIndex].messages[index]);
+      }
+    });
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
