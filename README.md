@@ -2,51 +2,51 @@
 
 Generate conventional commit messages from staged git changes using AI.
 
-`commit-ai` is a TypeScript CLI tool that reads your staged `git diff`, sends it to an AI model, and suggests clean commit messages you can use immediately.
+`commit-ai` analyzes your staged `git diff`, sends it to an AI model, and suggests clean, specific commit messages you can use immediately — either from your terminal or directly inside VS Code.
 
 The goal is to make writing high-quality commit messages faster, easier, and more consistent.
 
 ---
 
-# Features
+## Features
 
 - Generate commit messages from staged changes
 - Conventional commit formatting
-- Interactive commit selection
-- Optional automatic commit execution
-- Built with TypeScript and Node.js
-- Simple CLI workflow
-- AI-powered suggestions using Groq (for now)
+- Interactive commit selection with re-roll
+- One-click copy, commit, or set as SCM input (extension)
+- Generation history (extension)
+- Multi-provider support: Groq and OpenAI
+- Works as a CLI tool or a VS Code extension — independently
 
 ---
 
-# Demo
+## Demo
 
-Stage your changes:
+<!-- Add demo GIF here before publishing to marketplace -->
+
+**VS Code Extension**
+
+Open the command palette and run `Commit AI: Generate Commit Messages`. A panel opens beside your editor with generated suggestions. Click to commit, copy to clipboard, or set as your SCM input message.
+
+**CLI**
+
+Stage your changes and run:
 
 ```bash
 git add .
-```
-
-Run the CLI:
-
-```bash
 npm run dev
 ```
 
-Select one of the generated commit messages.
-(Example output):
+Select one of the generated messages:
 
 ```txt
 Choose a commit message:
-❯ feat: add AI-powered commit message generator
-  fix: improve staged diff parsing
-  chore: configure TypeScript CLI setup
+❯ feat(cli): add --commit flag to skip confirmation prompt
+  refactor(ai): move provider init inside generateCommitMessages
+  chore: update tsconfig paths for src/lib layout
 ```
 
-or
-
-Generate a message and immediately create the commit:
+Or commit immediately:
 
 ```bash
 npm run dev -- --commit
@@ -54,60 +54,75 @@ npm run dev -- --commit
 
 ---
 
-# How It Works
+## How It Works
 
-```txt
+**Extension flow:**
+```
 git add .
 ↓
-commit-ai reads staged git diff
+Command Palette → "Commit AI: Generate Commit Messages"
+↓
+Commit AI panel opens
+↓
+AI analyzes staged diff
+↓
+3 suggestions displayed
+↓
+Set as SCM message, commit directly, or copy to clipboard
+```
+
+**CLI flow:**
+```
+git add .
+↓
+commit-ai reads staged diff
 ↓
 AI analyzes changes
 ↓
-commit-ai generates commit messages
+Interactive selection in terminal
 ↓
-you choose one
-↓
-optional automatic git commit
+Optional automatic git commit
 ```
 
 ---
 
-# Requirements
+## Requirements
 
+**VS Code Extension**
+- VS Code 1.90+
+- A Groq API key (free at https://console.groq.com) or OpenAI API key
+
+**CLI**
 - Node.js 20+
 - npm
 - Git
-- Groq API key
+- A Groq API key or OpenAI API key
 
 ---
 
-# Installation
+## Installation
+
+**VS Code Extension**
+
+> `.vsix` packaging coming soon. Install instructions will be added here.
+
+**CLI**
 
 Clone the repository:
 
 ```bash
 git clone https://github.com/emvillama/commit-ai.git
 cd commit-ai
-```
-
-Install dependencies:
-
-```bash
 npm install
 ```
-
----
-
-# Environment Setup
 
 Create a `.env` file in the project root:
 
 ```env
 GROQ_API_KEY=your_api_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-Or copy the example file:
+Or copy the example:
 
 ```bash
 cp .env.example .env
@@ -115,17 +130,60 @@ cp .env.example .env
 
 ---
 
-# Project Structure
+## Configuration
 
-```txt
+**VS Code Extension**
+
+Configure via Settings → Extensions → Commit AI:
+
+| Setting | Default | Description |
+|---|---|---|
+| `commitAi.provider` | `groq` | AI provider (`groq` or `openai`) |
+| `commitAi.groqApiKey` | — | Your Groq API key |
+| `commitAi.openAiApiKey` | — | Your OpenAI API key |
+| `commitAi.model` | — | Override the default model (leave blank for provider default) |
+| `commitAi.count` | `3` | Number of suggestions to generate |
+
+**CLI**
+
+Configuration is read from environment variables or a `~/.commit-ai.json` file:
+
+```json
+{
+  "provider": "groq",
+  "model": "llama-3.3-70b-versatile",
+  "count": 3
+}
+```
+
+Environment variables take precedence: `GROQ_API_KEY`, `OPENAI_API_KEY`, `AI_PROVIDER`, `GROQ_MODEL`, `OPENAI_MODEL`.
+
+---
+
+## Project Structure
+
+```
 commit-ai/
 ├── src/
-│   ├── ai.ts
-│   ├── git.ts
-│   ├── index.ts
-│   └── prompt.ts
-├── tests/
-├── docs/
+│   ├── cli/              # CLI entry point and environment wiring
+│   │   ├── ai.ts         # Provider setup from env vars
+│   │   ├── config.ts     # CLI config (env + ~/.commit-ai.json)
+│   │   ├── git.ts        # Git operations (diff, commit)
+│   │   └── index.ts      # CLI entry point
+│   ├── lib/              # Shared core logic (used by both CLI and extension)
+│   │   ├── extensionConfig.ts  # Provider setup from VS Code settings
+│   │   ├── groq.ts             # Groq provider
+│   │   ├── openai.ts           # OpenAI provider
+│   │   ├── parse.ts            # AI response parsing
+│   │   ├── prompt.ts           # Prompt construction
+│   │   └── types.ts            # Shared interfaces
+│   ├── tests/
+│   │   ├── parse.test.ts
+│   │   └── prompt.test.ts
+│   ├── webview/
+│   │   ├── CommitAIPanel.ts    # Webview panel controller
+│   │   └── panel.html          # Webview UI
+│   └── extension.ts      # VS Code extension entry point
 ├── .env.example
 ├── package.json
 ├── tsconfig.json
@@ -134,102 +192,65 @@ commit-ai/
 
 ---
 
-# Architecture Overview
+## Architecture
 
-## `index.ts`
+### CLI and Extension as Separate Features
 
-CLI entrypoint and user interaction flow.
+`commit-ai` supports two independent interfaces: a CLI tool and a VS Code extension. This is intentional.
 
-## `git.ts`
+The CLI was built first as a standalone tool and remains fully functional on its own — no VS Code required. The extension was added later as a richer interface for developers who want deeper editor integration.
 
-Handles Git operations:
-- reading staged diffs
-- creating commits
+The two are kept deliberately separate so that:
 
-## `ai.ts`
+- The CLI works in any terminal environment, CI pipelines, or editors without extension support
+- The extension can evolve its UI independently without affecting CLI behavior
+- Either can be used, maintained, or removed without breaking the other
 
-Handles AI provider integration and response parsing.
+### Shared Core (`src/lib/`)
 
-## `prompt.ts`
+Both interfaces share the same underlying logic. AI provider clients, prompt construction, and response parsing all live in `src/lib/`. The CLI (`src/cli/`) and the extension (`src/extension.ts`, `src/lib/extensionConfig.ts`) are thin wrappers that wire up configuration from their respective environments — environment variables for the CLI, VS Code settings for the extension — and call into the shared core.
 
-Builds prompts used for commit message generation.
+### Design Philosophy
 
----
+**Staged changes only** — `commit-ai` only analyzes staged changes because commits should represent intentional snapshots. This avoids noisy or incomplete messages.
 
-# Design Philosophy
+**Conventional commits** — Generated messages follow conventional commit formatting because it improves readability, standardizes history, supports changelog automation, and works well with CI/CD tooling.
 
-## Staged Changes Only
-
-`commit-ai` only analyzes staged changes because commits should represent intentional snapshots.
-
-This avoids noisy or incomplete commit messages.
-
-## Conventional Commits
-
-Generated messages follow conventional commit formatting because it:
-- improves readability
-- standardizes history
-- supports changelog automation
-- works well with CI/CD tooling
-
-## Simple First
-
-The project prioritizes:
-- fast workflow
-- minimal setup
-- clear output
-- extensibility
-
-before adding advanced features.
+**Specific over generic** — The prompt is engineered to produce messages that reference actual function names, modules, and behaviors. Vague messages like `fix: error handling` are explicitly penalized in the prompt.
 
 ---
 
-# Roadmap
+## Roadmap
 
-## v0.1 — MVP
+### Extension
+
+- [x] Extension scaffold with command palette integration
+- [x] Webview panel UI
+- [x] Generate, copy, commit, and set SCM message actions
+- [x] Re-roll suggestions
+- [x] Generation history
+- [ ] Package as `.vsix`
+- [ ] Publish to VS Code Marketplace
+
+### CLI
 
 - [x] Read staged git diff
 - [x] Generate commit messages with AI
 - [x] Interactive commit selection
 - [x] Optional automatic commit execution
-
-## v0.2 — CLI Improvements
-
-- [ ] Copy-to-clipboard support
-- [ ] Better error handling
+- [x] Multi-provider support (Groq, OpenAI)
 - [ ] Loading spinner
 - [ ] Dry-run mode
+- [ ] npm package publishing
 
-## v0.3 — Configuration
+### Both
 
-- [ ] Config file support
-- [ ] Custom commit styles
-- [ ] Custom prompt templates
-- [ ] Model configuration
-
-## v0.4 — Quality
-
-- [ ] Unit tests
-- [ ] Integration tests
 - [ ] GitHub Actions CI
 - [ ] Linting and formatting
-
-## v0.5 — Distribution
-
-- [ ] Build pipeline
-- [ ] npm package publishing
-- [ ] Global installation support
-- [ ] Release automation
-
-## v1.0 — Stable Release
-
-- [ ] Stable public CLI API
-- [ ] Full documentation
-- [ ] Plugin architecture exploration
-- [ ] Multi-provider AI support
+- [ ] Integration tests
 
 ---
 
-# License
+## License
 
 MIT
